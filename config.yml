@@ -1,0 +1,28 @@
+description: "produce 200 small messages per sec for 12 hours to 10 topics, with random bursts of up to 1000 messages"
+metrics:
+  endpoint: /metrics
+  port: 8081
+generator:
+  random:
+    messages_per_sec: 200
+    message_size_in_bytes: 200
+    duration_in_sec: 43200
+    burst_messages_per_sec: 1000
+    burst_probability: 0.1
+    sampling_distribution: bernoulli # or binormal
+producer:
+  stdout: {}
+  kafka:
+    brokers: ["0.0.0.0:9092"]
+    sasl_enabled: false
+    secrets:
+      username: "admin"
+      password: "password"
+    n_topics: 10
+    poll_timeout_in_ms: 0
+    additional_rdkafka_settings:
+      "message.timeout.ms": "50"
+      "queue.buffering.max.ms": "0"
+      "enable.idempotence": "true"
+      "message.send.max.retries": "10"
+      "retry.backoff.ms": "1"
