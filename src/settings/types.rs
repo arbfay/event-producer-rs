@@ -53,6 +53,25 @@ pub struct KafkaSettings {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(tag = "mode")]
+pub enum RedisMode {
+    #[serde(alias="pubsub")]
+    PubSub,
+    #[serde(alias="list")]
+    List,
+    #[serde(alias="kv")]
+    KeyValue
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct RedisSettings {
+    pub uri: String,
+    pub n_conn: u32,
+    #[serde(flatten)]
+    pub mode: RedisMode
+}
+
+#[derive(Clone, Debug, Deserialize)]
 pub struct StdoutSettings {
 }
 
@@ -60,6 +79,7 @@ pub struct StdoutSettings {
 pub struct ProducerSettings {
     pub kafka: Option<KafkaSettings>,
     pub stdout: Option<StdoutSettings>,
+    pub redis: Option<RedisSettings>
 }
 
 #[derive(Clone, Debug, Deserialize)]

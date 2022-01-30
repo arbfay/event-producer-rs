@@ -11,6 +11,7 @@ generator:
     burst_messages_per_sec: 1000
     burst_probability: 0.1
 producer:
+  ### !!! Keep only one producer in your config file !!!
   stdout: {}
   kafka:
     brokers: ["0.0.0.0:9092"]
@@ -26,3 +27,8 @@ producer:
       "enable.idempotence": "true"
       "message.send.max.retries": "10"
       "retry.backoff.ms": "1"
+  redis:
+    uri: "redis://localhost:6379/0"
+    n_conn: 1
+    mode: pubsub # or list
+    n_channels: 10

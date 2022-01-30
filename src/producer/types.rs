@@ -1,5 +1,5 @@
 pub trait Produce {
-    fn produce(&self, message: Vec<u8>) -> Result<(), String>;
+    fn produce(&mut self, message: Vec<u8>) -> Result<(), String>;
     fn stop(&self) {}
 }
 

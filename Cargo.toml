@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default             = ["kafka"]
+default             = ["kafka", "redis"]
 kafka               = ["rdkafka"]
-full                = ["kafka"]
+full                = ["kafka", "redis"]
 
 [dependencies]
 config              = { version = "0.11", features = ["yaml"] }
@@ -14,6 +14,7 @@ rdkafka             = { version = "0.27.0", features = ["gssapi"], optional = tr
 hyper               = { version = "0.14.16", features = ["runtime", "server"] }
 tokio               = { version = "1.16.1", features = ["rt", "rt-multi-thread"] }
 dasp                = { version = "0.11.0", features = ["signal"] }
+redis               = { version = "0.21.5", optional = true }
 log                 = "0.4.14"
 pretty_env_logger   = "0.4.0"
 lazy_static         = "1.4.0"

@@ -44,7 +44,7 @@ impl KafkaProducer {
 }
 
 impl Produce for KafkaProducer {
-    fn produce(&self, message: Vec<u8>) -> Result<(), String>{
+    fn produce(&mut self, message: Vec<u8>) -> Result<(), String>{
         super::PRODUCTION_MESSAGES_SENT.inc();
         let topic = format!("topic_{}", fastrand::u32(0..self.settings.n_topics));
         let result = match self.base_producer.send(BaseRecord::to(topic.as_str()).payload(&message).key("none")) {

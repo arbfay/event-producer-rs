@@ -12,7 +12,7 @@ impl StdoutProducer {
 }
 
 impl Produce for StdoutProducer {
-    fn produce(&self, message: Vec<u8>) -> Result<(), String>{
+    fn produce(&mut self, message: Vec<u8>) -> Result<(), String>{
         super::PRODUCTION_MESSAGES_SENT.inc();
         println!("{:?}", message);
         Ok(())
