@@ -3,6 +3,8 @@ use std::collections::HashMap;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct MetricsSettings {
+    #[serde(default)]
+    pub enable: bool,
     pub endpoint: String,
     pub port: u16
 }
@@ -13,7 +15,9 @@ pub enum BurstProbabilityDistribution {
     #[serde(alias="uniform")]
     Uniform,
     #[serde(alias="bernoulli")]
-    Bernoulli
+    Bernoulli,
+    #[serde(alias="fastrand")]
+    Fastrand
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -24,7 +28,7 @@ pub struct RandomGeneratorSettings {
     pub burst_messages_per_sec: u32,
     pub burst_probability: f64,
     #[serde(flatten)]
-    pub sampling_distribution: BurstProbabilityDistribution
+    pub sampling_distribution: Option<BurstProbabilityDistribution>
 }
 
 #[derive(Clone, Debug, Deserialize)]

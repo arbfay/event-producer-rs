@@ -1,7 +1,10 @@
-use prometheus::{Registry};
+use prometheus::{Registry, Encoder};
 use crossbeam_channel::{unbounded};
 use crossbeam_utils::thread;
-use event_producer::{self, generator::{random_bytes::RandomGenerator, types::GeneratorLoop, GENERATED_MESSAGES_COUNT}, producer::{stdout::StdoutProducer}};
+use event_producer::{
+    self, 
+    generator::{random_bytes::RandomGenerator, types::GeneratorLoop, GENERATED_MESSAGES_COUNT}, 
+    producer::{stdout::StdoutProducer, PRODUCTION_MESSAGES_SENT, PRODUCTION_CHANNEL_QUEUE}};
 
 fn main() {
     pretty_env_logger::init_timed();
@@ -11,7 +14,8 @@ fn main() {
     // Prometheus metrics registry
     let metrics_registry = Registry::new_custom(Some("random_producer".to_string()), None).unwrap();
     metrics_registry.register(Box::new(GENERATED_MESSAGES_COUNT.clone())).expect("Failed to register metric");
-
+    metrics_registry.register(Box::new(PRODUCTION_MESSAGES_SENT.clone())).expect("Failed to register metric");
+    metrics_registry.register(Box::new(PRODUCTION_CHANNEL_QUEUE.clone())).expect("Failed to register metric");
     
     // Create channel
     let (sender, receiver) = unbounded();
@@ -46,15 +50,21 @@ fn main() {
             })
             .expect("Failed to spawn thread: generation");
         
-
-        // Launch metrics server
-        scope.builder()
-            .name("metrics server".to_string())
-            .spawn(|_| { 
-                event_producer::metrics::start_metrics_service(settings.metrics, Box::new(metrics_registry.clone()))
-            })
-            .expect("Failed to start metrics server");
-
+        // Launch metrics server if enabled
+        if settings.metrics.enable{
+            scope.builder()
+                .name("metrics server".to_string())
+                .spawn(|_| {
+                    event_producer::metrics::start_metrics_service(settings.metrics, Box::new(metrics_registry.clone()))
+                })
+                .expect("Failed to start metrics server");
+        }
     })
     .unwrap();
+
+    let metrics = metrics_registry.gather();
+    let encoder = prometheus::TextEncoder::new();
+    let mut buffer = vec![];
+    encoder.encode(&metrics, &mut buffer).unwrap();
+    println!("{}", String::from_utf8(buffer.to_ascii_lowercase()).unwrap());
 }

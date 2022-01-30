@@ -19,11 +19,18 @@ pub fn run_production_loop<T: Produce>(
     producer: T,
     receiver: Receiver<Vec<u8>>
 ){
+    let rec_clone = receiver.clone();
+    let mut counter = 0;
     for msg in receiver {
         if msg.is_empty() {
             break;
         } else {
+            counter+=1;
             producer.produce(msg).unwrap();
+        }
+        if counter%200 == 0{
+            let l = rec_clone.len();
+            PRODUCTION_CHANNEL_QUEUE.set(l as i64);
         }
     }
     producer.stop();

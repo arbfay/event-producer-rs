@@ -1,15 +1,15 @@
 description: "produce 200 small messages per sec for 12 hours to 10 topics, with random bursts of up to 1000 messages"
 metrics:
+  enable: false
   endpoint: /metrics
   port: 8081
 generator:
   random:
     messages_per_sec: 200
     message_size_in_bytes: 200
-    duration_in_sec: 43200
+    duration_in_sec: 6000
     burst_messages_per_sec: 1000
     burst_probability: 0.1
-    sampling_distribution: bernoulli # or binormal
 producer:
   stdout: {}
   kafka:
