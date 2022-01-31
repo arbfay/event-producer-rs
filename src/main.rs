@@ -4,7 +4,8 @@ use crossbeam_utils::thread;
 use event_producer::{
     self, 
     generator::{random_bytes::RandomGenerator, types::GeneratorLoop, GENERATED_MESSAGES_COUNT}, 
-    producer::{stdout::StdoutProducer, PRODUCTION_MESSAGES_SENT, PRODUCTION_CHANNEL_QUEUE, PRODUCTION_LATENCY_BUCKETS}};
+    producer::{stdout::StdoutProducer, PRODUCTION_MESSAGES_SENT, PRODUCTION_CHANNEL_QUEUE,
+        PRODUCTION_LATENCY_BUCKETS, kafka::KafkaProducer, redis::RedisProducer}};
 
 fn main() {
     pretty_env_logger::init_timed();
@@ -20,6 +21,10 @@ fn main() {
 
     // Create channel
     let (sender, receiver) = unbounded();
+
+    let mut stdout_producer = StdoutProducer::default();
+    let mut kafka_producer = KafkaProducer::default();
+    let mut redis_producer = RedisProducer::default();
 
     // Create 3 threads - 1 for generation, 1 for production, 1 for the metrics server
     thread::scope(|scope|{
@@ -41,14 +46,14 @@ fn main() {
             .spawn(move |_| {
                 // Create producer
                 if settings.producer.stdout.is_some() {
-                    let mut producer = StdoutProducer::new(settings.producer.stdout.unwrap());
-                    event_producer::producer::run_production_loop(&mut producer, receiver);
+                    stdout_producer.instantiate(settings.producer.stdout.unwrap());
+                    event_producer::producer::run_production_loop(stdout_producer, receiver);
                 } else if settings.producer.kafka.is_some() & cfg!(feature = "kafka") {
-                    let mut producer = event_producer::producer::kafka::KafkaProducer::new(settings.producer.kafka.unwrap());
-                    event_producer::producer::run_production_loop(&mut producer, receiver);
+                    kafka_producer.instantiate(settings.producer.kafka.unwrap());
+                    event_producer::producer::run_production_loop(kafka_producer, receiver);
                 } else if settings.producer.redis.is_some() & cfg!(feature = "redis") {
-                    let mut producer = event_producer::producer::redis::RedisProducer::new(settings.producer.redis.unwrap());
-                    event_producer::producer::run_production_loop(&mut producer, receiver);
+                    redis_producer.instantiate(settings.producer.redis.unwrap());
+                    event_producer::producer::run_production_loop(redis_producer, receiver);
                 }
             })
             .expect("Failed to spawn thread: generation");

@@ -46,8 +46,10 @@ self.settings.burst_probability
             //let to_sub = Duration::from_nanos(generation_avg_time as u64);
             for _ in 0..(n as u64) {
                 let msg = self.generate();
-                if sender.send(msg).is_err() {
+                let err = sender.send(msg).err();
+                if err.is_some() {
                     error!("Could not send message");
+                    error!("{:#?}", err.unwrap());
                 }
                 sleep(base_wait_time);
             }

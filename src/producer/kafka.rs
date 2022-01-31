@@ -1,16 +1,27 @@
 use std::time::Duration;
+use async_trait::async_trait;
 use log::{error, info, debug};
 use rdkafka::{producer::{Producer, BaseRecord}, util::Timeout, ClientConfig};
 use crate::settings::types::KafkaSettings;
-use super::types::Produce;
+use super::types::{Produce, ImplOutput};
 
+#[derive(Clone)]
 pub struct KafkaProducer {
     settings: KafkaSettings,
     base_producer: rdkafka::producer::BaseProducer
 }
 
-impl KafkaProducer {
-    pub fn new(settings: KafkaSettings) -> Self {
+impl Default for KafkaProducer {
+    fn default() -> Self {
+        KafkaProducer{
+            settings: KafkaSettings { brokers: vec![], sasl_enabled: false, n_topics: 0, secrets: None, poll_timeout_in_ms: 0, additional_rdkafka_settings: None},
+            base_producer: ClientConfig::new().create().unwrap()
+        }
+    }
+}
+
+impl<'a> KafkaProducer {
+    pub fn instantiate(&mut self, settings: KafkaSettings) {
         info!("Creating a Kafka Producer");
         let settings_clone = settings.clone();
         let mut base_config = ClientConfig::new();
@@ -24,8 +35,8 @@ impl KafkaProducer {
             producer_config = producer_config
                 .set("security.protocol", "sasl_plaintext")
                 .set("sasl.mechanism", "SCRAM-SHA-256")
-                .set("sasl.username", secrets.username.clone().as_str())
-                .set("sasl.password", secrets.password.clone().as_str());
+                .set("sasl.username", secrets.username.clone())
+                .set("sasl.password", secrets.password.clone());
         }
 
         if settings.additional_rdkafka_settings.is_some() {
@@ -37,23 +48,25 @@ impl KafkaProducer {
                 .create()
                 .expect("failed to get a producer");
 
-        KafkaProducer { 
-            settings: settings_clone,
-            base_producer: producer }
+        self.settings = settings_clone;
+        self.base_producer = producer;
     }
 }
 
+#[async_trait]
 impl Produce for KafkaProducer {
-    fn produce(&mut self, message: Vec<u8>) -> Result<(), String>{
+    type Output = ImplOutput;
+
+    async fn produce(&mut self, message: Vec<u8>) -> Self::Output{
         super::PRODUCTION_MESSAGES_SENT.inc();
         let topic = format!("topic_{}", fastrand::u32(0..self.settings.n_topics));
         let result = match self.base_producer.send(BaseRecord::to(topic.as_str()).payload(&message).key("none")) {
-            Ok(_) => Ok(()),
+            Ok(_) => std::future::ready(Ok(())),
             Err((error, record)) => {
                 let err_str = format!("Failed to enqueue. Record: {:?}. Error {}", record, error);
                 error!("{}", err_str);
                 super::PRODUCTION_MESSAGES_FAILED_TO_SEND.inc();
-                Err(err_str)
+                std::future::ready(Err(err_str))
             }
         };
         let i = self.base_producer.poll(Duration::from_millis(0));

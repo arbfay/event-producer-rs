@@ -2,7 +2,6 @@ use log::info;
 use prometheus::{Registry, Encoder};
 use std::net::{Ipv4Addr, SocketAddr, IpAddr};
 use std::sync::Arc;
-use tokio::runtime::Runtime;
 
 use hyper::server::Server;
 use hyper::{Body, Request, Response};
@@ -34,7 +33,7 @@ pub fn start_metrics_service(settings: MetricsSettings, registry: Box<Registry>)
     info!("Starting metrics service");
     let registry_ptr = std::sync::Arc::new(registry);
     
-    let runner = Runtime::new().expect("Failed to start async runtime for metrics server");
+    let runner = tokio::runtime::Builder::new_current_thread().enable_all().build().expect("Failed to start async runtime for metrics server");
     runner.block_on(async {
         let addr = SocketAddr::new(IpAddr::from(Ipv4Addr::LOCALHOST), settings.port);
 

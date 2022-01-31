@@ -1,6 +1,9 @@
 use serde_derive::Deserialize;
 use std::collections::HashMap;
 
+
+pub trait ProducerSetting {}
+
 #[derive(Clone, Debug, Deserialize)]
 pub struct MetricsSettings {
     #[serde(default)]
@@ -52,6 +55,8 @@ pub struct KafkaSettings {
     pub additional_rdkafka_settings: Option<HashMap<String, String>>
 }
 
+impl ProducerSetting for KafkaSettings {}
+
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "mode")]
 pub enum RedisMode {
@@ -71,9 +76,12 @@ pub struct RedisSettings {
     pub mode: RedisMode
 }
 
+impl ProducerSetting for RedisSettings {}
+
 #[derive(Clone, Debug, Deserialize)]
-pub struct StdoutSettings {
-}
+pub struct StdoutSettings {}
+
+impl ProducerSetting for StdoutSettings {}
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ProducerSettings {
@@ -86,5 +94,5 @@ pub struct ProducerSettings {
 pub struct Settings {
     pub metrics: MetricsSettings,
     pub generator: GeneratorSettings,
-    pub producer: ProducerSettings,
+    pub producer: ProducerSettings
 }

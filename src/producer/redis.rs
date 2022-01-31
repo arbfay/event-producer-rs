@@ -1,33 +1,52 @@
+use async_trait::async_trait;
 use log::info;
-use redis::Commands;
+use redis::{RedisError, AsyncCommands};
 use crate::settings::types::RedisSettings;
-use super::types::Produce;
+use super::types::{Produce, ImplOutput};
 
 pub struct RedisProducer{
     _settings: RedisSettings,
-    conn: redis::Connection
+    client: Option<redis::Client>,
+    conn: Option<redis::aio::Connection>
 }
 
-impl RedisProducer {
-    pub fn new(settings: RedisSettings) -> Self {
-        info!("Creating a Redis Producer");
-        let client = &redis::Client::open(settings.uri.clone()).expect("Failed to start Redis client");
-
+impl Default for RedisProducer {
+    fn default() -> Self {
         RedisProducer{
-            _settings: settings,
-            conn: client.get_connection().expect("Failed to connect to Redis"),
+            _settings: RedisSettings { uri: "".to_string(), n_conn: 0, mode: crate::settings::types::RedisMode::PubSub },
+            client: None,
+            conn: None
         }
     }
 }
 
+impl RedisProducer {
+    pub fn instantiate<'a>(&mut self, settings: RedisSettings) {
+        info!("Creating a Redis Producer");
+        let client = redis::Client::open(settings.uri.clone()).expect("Failed to start Redis client");
+        //let conn = client.get_async_connection().await.unwrap();
+        self._settings = settings;
+        self.client = Some(client);
+        //self.conn = Some(None);
+
+    }
+}
+
+#[async_trait]
 impl Produce for RedisProducer {
-    fn produce(&mut self, message: Vec<u8>) -> Result<(), String>{
+    type Output = ImplOutput;
+    async fn produce(&mut self, message: Vec<u8>) -> Self::Output {
         // Pubsub and synchronous
-        match self.conn.publish("channel_1", message) {
-            Ok(()) => Ok(super::PRODUCTION_MESSAGES_SENT.inc()),
+        if self.conn.is_none(){
+            self.conn = Some(self.client.as_ref().unwrap().get_async_connection().await.unwrap());
+        }
+        //let mut conn = self.conn.expect("Failed to connect to Redis");
+        let res: Result<(), RedisError> = self.conn.as_mut().unwrap().publish("channel_1", message).await;
+        match res {
+            Ok(()) => std::future::ready(Ok(super::PRODUCTION_MESSAGES_SENT.inc())),
             Err(err) => {
                 super::PRODUCTION_MESSAGES_FAILED_TO_SEND.inc();
-                Err(format!("{}", err))
+                std::future::ready(Err(format!("{}", err)))
             }
         }
     }
